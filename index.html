@@ -1231,6 +1231,15 @@ html.lite #cur{display:none}
 img{content-visibility:auto}
 
 .offscr,.offscr *{animation-play-state:paused!important}
+.forgot{all:unset;cursor:pointer;font-size:13px;color:var(--mute,#9a9a9a);text-align:center;padding:4px}
+.forgot:hover{color:var(--bone)}
+.acct-h{display:flex;align-items:center;gap:14px}
+.acct-h b{display:block;font-size:18px}.acct-h span#acct-mail{font-size:13px;opacity:.6}
+.acct-av,.signin .av{display:inline-grid;place-items:center;border-radius:50%;background:var(--accent);color:#fff;font-weight:600;overflow:hidden;background-size:cover;background-position:center}
+.acct-av{width:52px;height:52px;font-size:20px}
+.signin.in{display:inline-flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+body[data-lang="ar"] .signin.in{padding:5px 5px 5px 14px}
+.signin .av{width:28px;height:28px;font-size:13px}
 </style>
 
 <canvas id="bg" aria-hidden="true"></canvas>
@@ -1613,8 +1622,14 @@ img{content-visibility:auto}
       <div class="fld"><label for="a-email"><span class="en">Email</span><span class="ar">البريد الإلكتروني</span></label><input id="a-email" type="email" autocomplete="email" dir="ltr"></div>
       <div class="fld"><label for="a-pass"><span class="en">Password</span><span class="ar">كلمة المرور</span></label><input id="a-pass" type="password" autocomplete="current-password" dir="ltr"></div>
       <button class="btn acc" type="submit" style="justify-content:center"><span id="auth-sub"></span></button>
+      <button type="button" class="forgot" id="a-forgot"><span class="en">Forgot password?</span><span class="ar">نسيت كلمة المرور؟</span></button>
       <div id="authmsg" class="msg" hidden></div>
     </form>
+  </div>
+  <div class="fbody acct" id="acct" hidden>
+    <div class="acct-h"><span class="acct-av" id="acct-av"></span><div><b id="acct-name"></b><span id="acct-mail" dir="ltr"></span></div></div>
+    <button class="btn" data-favopen type="button" style="justify-content:center"><span class="en">My saved work</span><span class="ar">الأعمال المحفوظة</span></button>
+    <button class="btn" id="a-out" type="button" style="justify-content:center"><span class="en">Sign out</span><span class="ar">تسجيل الخروج</span></button>
   </div>
 </dialog>
 <dialog id="form" class="narrow" aria-label="Form">
@@ -2736,16 +2751,81 @@ function authUI(){
   $$('.atabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.at===amode));
   $('#authmsg').hidden=true;
 }
-const authNote=()=>{const m=$('#authmsg');m.hidden=false;m.className='msg';m.innerHTML=T('Accounts open with the live launch of the site. This preview shows how sign-in will look.','الحسابات تفتح مع إطلاق الموقع رسميًا. هذه معاينة لشكل تسجيل الدخول.');};
-document.addEventListener('click',e=>{if(e.target.closest('[data-auth]')){e.preventDefault();closeMenu();amode='in';authUI();$('#auth').showModal();}});
+/* Firebase project settings — paste the web-app config here to turn accounts on */
+const FIREBASE={apiKey:'AIzaSyCX_S0Unz5oqIdAklXiW6cfeSTA3g6HO9Y',authDomain:'diaa-portfolio.firebaseapp.com',projectId:'diaa-portfolio',appId:'1:926918327649:web:d2dc2127d2cb38ea411920',messagingSenderId:'926918327649'};
+/* sites where sign-in is allowed (must also be listed in Firebase → Authentication → Authorized domains) */
+const AUTH_HOSTS=['diaasaid74.github.io','localhost'];
+const AUTH_ON=AUTH_HOSTS.includes(location.hostname);
+const AUTH={fb:null,user:null,ready:null};
+const amsg=(t,cls='')=>{const m=$('#authmsg');m.hidden=false;m.className='msg '+cls;m.innerHTML=t;};
+const authNote=()=>amsg(T('Accounts open with the live launch of the site. This preview shows how sign-in will look.','الحسابات تفتح مع إطلاق الموقع رسميًا. هذه معاينة لشكل تسجيل الدخول.'));
+const loadJs=src=>new Promise((ok,no)=>{const x=document.createElement('script');x.src=src;x.onload=ok;x.onerror=no;document.head.appendChild(x);});
+function authInit(){
+  if(!FIREBASE.apiKey||!AUTH_ON) return Promise.resolve(null);
+  if(AUTH.ready) return AUTH.ready;
+  AUTH.ready=(async()=>{
+    await loadJs('https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js');
+    await loadJs('https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js');
+    const app=firebase.initializeApp(FIREBASE); const a=firebase.auth(app);
+    a.useDeviceLanguage(); try{ await a.setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(_){}
+    a.onAuthStateChanged(u=>{AUTH.user=u; authNav(); if($('#auth').open) authUI();});
+    try{ await a.getRedirectResult(); }catch(err){ }
+    AUTH.fb=a; return a;
+  })().catch(err=>{console.warn('auth',err); AUTH.ready=null; return null;});
+  return AUTH.ready;
+}
+const initials=u=>((u.displayName||u.email||'?').trim()[0]||'?').toUpperCase();
+function avHTML(u,cls){return u.photoURL?`<span class="${cls}" style="background-image:url('${esc(u.photoURL)}')"></span>`:`<span class="${cls}">${esc(initials(u))}</span>`;}
+function authNav(){
+  const u=AUTH.user, b=$('.signin');
+  if(b){ if(u){ b.classList.add('in'); b.innerHTML=avHTML(u,'av')+`<span>${esc((u.displayName||u.email.split('@')[0]).split(' ')[0])}</span>`; }
+         else { b.classList.remove('in'); b.innerHTML='<span class="en">Sign in</span><span class="ar">دخول</span>'; } }
+  const ml=document.querySelector('#mnav [data-auth]'); if(ml) ml.innerHTML=u?T('My account','حسابي'):'<span class="en">Sign in</span><span class="ar">دخول</span>';
+}
+function authUI(){
+  const u=AUTH.user;
+  $('#acct').hidden=!u; $('#auth > .fbody:not(.acct)').hidden=!!u;
+  if(u){ $('#acct-av').outerHTML=avHTML(u,'acct-av" id="acct-av'); $('#acct-name').textContent=u.displayName||T('Welcome','أهلًا بك'); $('#acct-mail').textContent=u.email||''; return; }
+  $('#auth-h').innerHTML=amode==='in'?T('Welcome back','أهلًا بعودتك'):T('Create your account','أنشئ حسابك');
+  $('#auth-sub').innerHTML=amode==='in'?T('Sign in','دخول'):T('Create account','إنشاء حساب');
+  $('#nameFld').hidden=amode==='in'; $('#a-forgot').hidden=amode!=='in';
+  $('#a-pass').autocomplete=amode==='in'?'current-password':'new-password';
+  $$('.atabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.at===amode));
+  $('#authmsg').hidden=true;
+}
+const AERR={'auth/invalid-credential':['Email or password is incorrect.','الإيميل أو كلمة المرور غير صحيحة.'],'auth/wrong-password':['Email or password is incorrect.','الإيميل أو كلمة المرور غير صحيحة.'],'auth/user-not-found':['No account with this email.','لا يوجد حساب بهذا الإيميل.'],'auth/email-already-in-use':['This email already has an account — sign in instead.','الإيميل ده عليه حساب بالفعل — سجّل دخول.'],'auth/weak-password':['Choose a stronger password.','اختر كلمة مرور أقوى.'],'auth/too-many-requests':['Too many attempts. Try again in a few minutes.','محاولات كثيرة. جرّب بعد دقائق.'],'auth/network-request-failed':['Connection problem. Check your internet.','مشكلة في الاتصال. تأكد من الإنترنت.'],'auth/popup-closed-by-user':['Sign-in window was closed.','تم إغلاق نافذة الدخول.'],'auth/unauthorized-domain':['Sign-in isn’t enabled on this address yet.','تسجيل الدخول غير مفعّل على هذا العنوان بعد.']};
+const aerr=e=>{const k=AERR[e&&e.code]; amsg(k?T(k[0],k[1]):T('Something went wrong. Try again.','حصلت مشكلة. جرّب تاني.'),'err');};
+const busy=(on)=>{$$('#auth button, #auth input').forEach(x=>x.disabled=on);};
+document.addEventListener('click',e=>{if(e.target.closest('[data-auth]')){e.preventDefault();closeMenu();amode='in';authUI();$('#auth').showModal();authInit();}});
 $$('.atabs button').forEach(b=>b.onclick=()=>{amode=b.dataset.at;authUI();});
-$('#gbtn').onclick=authNote;
-$('#authform').addEventListener('submit',e=>{e.preventDefault();
-  const em=$('#a-email').value.trim(), pw=$('#a-pass').value, m=$('#authmsg');
-  if(!/^\S+@\S+\.\S+$/.test(em)){m.hidden=false;m.className='msg err';m.innerHTML=T('Enter a valid email address.','اكتب بريدًا إلكترونيًا صحيحًا.');return;}
-  if(pw.length<8){m.hidden=false;m.className='msg err';m.innerHTML=T('Password needs at least 8 characters.','كلمة المرور لازم تكون ٨ أحرف على الأقل.');return;}
-  authNote();
+$('#gbtn').onclick=async()=>{
+  const a=await authInit(); if(!a) return authNote();
+  const p=new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({prompt:'select_account'});
+  busy(true); try{ await a.signInWithPopup(p); track('login',{method:'google'}); }
+  catch(err){ if(err.code==='auth/popup-blocked'||err.code==='auth/operation-not-supported-in-this-environment'){ try{ await a.signInWithRedirect(p); return; }catch(e2){ aerr(e2);} } else aerr(err); }
+  finally{ busy(false); }
+};
+$('#a-forgot').onclick=async()=>{
+  const em=$('#a-email').value.trim(); if(!/^\S+@\S+\.\S+$/.test(em)) return amsg(T('Write your email first, then tap “Forgot password”.','اكتب إيميلك الأول، وبعدين اضغط "نسيت كلمة المرور".'),'err');
+  const a=await authInit(); if(!a) return authNote();
+  busy(true); try{ a.languageCode=lang; await a.sendPasswordResetEmail(em); amsg(T('We sent a reset link to your email.','بعتنالك لينك تغيير كلمة المرور على الإيميل.'),'ok'); }catch(err){ aerr(err); } finally{ busy(false); }
+};
+$('#a-out').onclick=async()=>{ const a=await authInit(); if(a) await a.signOut(); $('#auth').close(); };
+$('#authform').addEventListener('submit',async e=>{e.preventDefault();
+  const em=$('#a-email').value.trim(), pw=$('#a-pass').value, nm=$('#a-name').value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(em)) return amsg(T('Enter a valid email address.','اكتب بريدًا إلكترونيًا صحيحًا.'),'err');
+  if(pw.length<8) return amsg(T('Password needs at least 8 characters.','كلمة المرور لازم تكون ٨ أحرف على الأقل.'),'err');
+  if(amode==='up'&&!nm) return amsg(T('Write your name.','اكتب اسمك.'),'err');
+  const a=await authInit(); if(!a) return authNote();
+  busy(true);
+  try{
+    if(amode==='up'){ const c=await a.createUserWithEmailAndPassword(em,pw); await c.user.updateProfile({displayName:nm}); AUTH.user=a.currentUser; authNav(); authUI(); track('sign_up',{method:'email'}); try{ a.languageCode=lang; await c.user.sendEmailVerification(); }catch(_){} }
+    else { await a.signInWithEmailAndPassword(em,pw); track('login',{method:'email'}); }
+    $('#a-pass').value='';
+  }catch(err){ aerr(err); } finally{ busy(false); }
 });
+$('#auth').addEventListener('click',e=>{ if(e.target.closest('[data-favopen]')){ $('#auth').close(); renderFavs(); $('#favdlg').showModal(); } });
+if(FIREBASE.apiKey&&AUTH_ON) authInit();
 
 /* ================= DIALOG CLOSE ================= */
 $$('dialog').forEach(d=>{d.addEventListener('click',e=>{if(e.target===d||e.target.closest('[data-close]'))d.close();});});
