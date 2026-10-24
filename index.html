@@ -1538,7 +1538,7 @@ body[data-lang="ar"] .signin.in{padding:5px 5px 5px 14px}
   <div class="wrap c-hero">
     <div>
       <span class="avail mono" data-avail><span class="dot"></span><span class="av-t"></span><span class="av-dots"></span><button class="xbtn adm" data-editavail>✎</button></span>
-      <h1 class="h1"><span class="en"><span class="w">Let's</span> <span class="w" style="animation-delay:.08s">create</span><br><span class="w" style="animation-delay:.16s">work that</span> <span class="swapw"><span class="w" style="animation-delay:.24s" data-swap>sells.</span></span></span><span class="ar"><span class="w">لنصنع</span> <span class="w" style="animation-delay:.08s">معًا</span><br><span class="w" style="animation-delay:.16s">تصميمًا</span> <span class="swapw"><span class="w" style="animation-delay:.24s" data-swap>يبيع.</span></span></span></h1>
+      <h1 class="h1"><span class="en"><span class="w">Let's</span> <span class="w" style="animation-delay:.08s">create</span><br><span class="w" style="animation-delay:.16s">work that</span> <span class="swapw"><span class="w" style="animation-delay:.24s" data-swap>sells.</span></span></span><span class="ar"><span class="w">لنصنع</span> <span class="w" style="animation-delay:.08s">معًا</span><br><span class="w" style="animation-delay:.16s">تصميمًا</span> <span class="swapw"><span class="w" style="animation-delay:.24s" data-swap>يحقق مبيعات.</span></span></span></h1>
     </div>
   </div>
 
@@ -2609,7 +2609,7 @@ function socialsHTML(){
     if(S.owner&&document.body.classList.contains('edit')) return `<button class="sic" data-editlinks aria-label="Add ${s.n}">${IC[s.k]}<span class="tip">+ ${s.n}</span></button>`;
     return `<span class="sic off" aria-label="${s.n}">${IC[s.k]}<span class="tip">${s.n}</span></span>`;}).join('');
 }
-const SWAP={en:['sells.','inspires.','stands out.','lasts.','gets noticed.'],ar:['يبيع.','إبداعيًا.','يُبهر.','لا يُنسى.','مختلفًا.']};
+const SWAP={en:['sells.','inspires.','stands out.','lasts.','gets noticed.'],ar:['يحقق مبيعات.','إبداعيًا.','يُبهر.','لا يُنسى.','مختلفًا.']};
 let swi=0;
 setInterval(()=>{ if(reduce||view!=='contact') return; swi++; $$('[data-swap]').forEach(el=>{const isAr=!!el.closest('.ar'); const w=SWAP[isAr?'ar':'en']; el.style.animation='none'; void el.offsetWidth; el.textContent=w[swi%w.length]; el.style.animation='rise .7s var(--ease) both';}); },2400);
 function renderSocials(){ $('#socials').innerHTML=socialsHTML(); $('#fsoc').innerHTML=socialsHTML(); }
